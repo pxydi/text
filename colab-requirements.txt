@@ -1,0 +1,11 @@
+numpy
+pandas
+matplotlib
+seaborn
+scikit-learn
+nltk
+beautifulsoup4
+gensim
+spacy
+wordcloud
+contractions
