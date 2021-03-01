@@ -10,6 +10,8 @@ import seaborn as sns
 import os, re, random, string
 from collections import defaultdict
 import nltk
+import contractions
+from nltk.tokenize import TweetTokenizer
 
 # Gensim
 import gensim
@@ -171,3 +173,70 @@ def plot_most_frequent_terms(frequency_dict, terms_to_plot,add_to_title=None):
     plt.title(title,**title_specs)
     plt.xticks(rotation=80,**ticks_specs)
     plt.yticks(**ticks_specs); 
+    
+    
+    
+# Create clean_tweet function
+####################################
+def clean_tweet_plot(tweet):
+####################################    
+#    import nltk, contractions
+
+    # Import tokenizer
+#    from nltk.tokenize import TweetTokenizer
+
+    # Create an instance  of the tokenizer
+    tokenizer = TweetTokenizer(reduce_len=True, strip_handles=True)
+    
+    '''
+    INPUT: 
+    - tweet: raw text
+    
+    OUTPUT:
+    - clean_tweet: cleaned text
+    '''
+
+    # Remove RT
+    clean_tweet = re.sub(r'RT','',tweet)
+
+    # Remove URL
+    clean_tweet = re.sub(r'https?:\/\/[^\s]+','',clean_tweet)
+
+    # Remove hash #
+    clean_tweet = re.sub(r'#','',clean_tweet)
+        
+    # Remove twitter username
+    clean_tweet = re.sub(r'@[A-Za-z]+','',clean_tweet)
+    
+    # Remove punctuation repetions (that are not removed by TweetTokenizer)
+    clean_tweet = re.sub(r'([._]){2,}','',clean_tweet)
+    
+    # Case conversion
+    clean_tweet = clean_tweet.lower()
+    
+    # Remove non-ascii chars
+    clean_tweet = ''.join([c for c in str(clean_tweet) if ord(c) < 128])
+
+    # Expand contractions
+    clean_tweet = contractions.fix(clean_tweet)
+    
+    # Tokenize tweet
+    tokens = tokenizer.tokenize(clean_tweet)
+
+    # Join tokens in a single string to recreate the tweet
+    clean_tweet = ' '.join([tok for tok in tokens])
+    
+    clean_tweet = re.sub(r'\s\.','.',clean_tweet)
+    clean_tweet = re.sub(r'\s,',',',clean_tweet)
+    clean_tweet = re.sub(r'\s!','!',clean_tweet)
+    clean_tweet = re.sub(r'\s\?','?',clean_tweet)
+    clean_tweet = re.sub(r'\$','',clean_tweet)
+    clean_tweet = re.sub(r'\s+',' ',clean_tweet)
+    
+    clean_tweet = clean_tweet.strip()
+    clean_tweet = re.sub(r'^[:-]','',clean_tweet)
+    clean_tweet = clean_tweet.strip()
+    
+    short_text = clean_tweet.split()
+    
+    return ' '.join(short_text[:5])+'...'
