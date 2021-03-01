@@ -9,4 +9,3 @@ gensim
 spacy
 wordcloud
 contractions
-nltk.download('stopwords')
