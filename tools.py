@@ -6,6 +6,8 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
+
 import seaborn as sns
 import os, re, random, string
 from collections import defaultdict
@@ -240,3 +242,203 @@ def clean_tweet_plot(tweet):
     short_text = clean_tweet.split()
     
     return ' '.join(short_text[:5])+'...'
+
+#########################
+def normalize_vector(v):
+#######################
+    if len(v.shape) == 2:
+        return v/np.linalg.norm(v,axis=1).reshape(-1,1)
+    else:
+        return v/np.linalg.norm(v)
+    
+#########################
+def plot_vectors(*vectors,plot_difference=False):
+#################################
+    # Stack vectors in matrix
+    vecs = np.zeros((1,len(vectors[0])))
+    
+    for i, vec in enumerate(vectors):
+        vecs = np.vstack((vecs,vec))
+        
+    # Compute difference between vectors
+    if plot_difference:
+        for i in range(len(vectors)-1):
+            for j in range(i+1,len(vectors)):
+                
+                diff = vectors[j] - vectors[i]
+                
+                vecs = np.vstack((vecs,diff))
+    
+    # Remove dummy vector at first row
+    vecs = vecs[1:,:]
+    #print(vecs)
+    
+    # Compute x_lim and y_lin
+    xy_limits = vecs.max(axis=0)
+    x_lim = xy_limits[0]
+    y_lim = xy_limits[1]
+    #print(x_lim,y_lim)
+        
+    # Plot vectors
+    ax = plt.figure(figsize=(8,5)).gca()
+    
+    arrow_dict  = {'head_width':0.008*x_lim, 'head_length':0.04*y_lim,'fc':'blue'}
+    arrow_dict_d = {'fc':'grey', 'ec':'grey','linestyle':"dashed"}
+    
+    for i, vec in enumerate(vectors):
+        # Plot arrow : (x-starting point, y-starting point, x-length,y_length, **kwargs)
+        ax.arrow(0,0,vec[0],vec[1],**arrow_dict);
+        
+        #Annotate
+        text = 'doc'+str(i+1)
+        ax.annotate(text,(vec[0]+0.02*x_lim,vec[1]+0.02*y_lim))
+    
+    # Plot difference
+    if plot_difference:
+        for i in range(len(vectors)-1):
+            for j in range(i+1,len(vectors)):
+                
+                diff = vectors[j] - vectors[i]
+                ax.arrow(vectors[i][0],vectors[i][1],diff[0],diff[1],**arrow_dict_d);
+
+    # Define limits for x/y-axes
+    ax.set_xlim(-0.02*x_lim,x_lim+0.2*x_lim)
+    ax.set_ylim(-0.02*y_lim,y_lim+0.2*y_lim)
+
+    font_dict = {'fontsize':16,'fontname':'Arial','style':'italic','weight':'bold'}
+    ax.set_xlabel('kindle',color='b',**font_dict)
+    ax.set_ylabel('love',color='b',**font_dict);
+
+    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+    ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+
+#######################
+# Plot cosine similarity using heatmaps
+
+def plot_similarity(features):
+#################################
+    plt.figure(figsize=(20,20))
+    corr = features 
+    mask = np.triu(np.ones_like(corr, dtype=bool))
+
+    g = sns.heatmap(
+        corr,
+        vmin=0,
+        vmax=features.max().max(),
+        cmap= "YlOrRd"
+    )
+    g.set_title("Semantic Textual Similarity")
+
+##################
+def visualize_bow_embeddings(X1,X2,df,label):
+########################   
+    title_specs = {'fontsize':16} #,'fontweight':'bold'}
+    label_specs = {'fontsize':14}
+    ticks_specs = {'fontsize':13}
+
+    fig, axes = plt.subplots(1,2,figsize=(12,5))
+
+    idx = df['semantic_category'] == label
+
+    axes[0].scatter(X1[idx,0],X1[idx,1],color="none", edgecolor='m',label=label);
+    axes[0].scatter(X1[~idx,0],X1[~idx,1],color="none", edgecolor='grey',alpha=0.3,label=None);
+    axes[0].set_xlabel('TSNE 1',**label_specs)
+    axes[0].set_ylabel('TSNE 2',**label_specs)
+    axes[0].set_title('Bag-of-words',**title_specs)
+
+    axes[1].scatter(X2[idx,0],X2[idx,1],color="none", edgecolor='b',label=label);
+    axes[1].scatter(X2[~idx,0],X2[~idx,1],color="none", edgecolor='grey',alpha=0.3,label=None);
+    axes[1].set_title('Embeddings',**title_specs)
+    axes[1].set_xlabel('TSNE 1',**label_specs)
+    axes[1].set_ylabel('TSNE 2',**label_specs)
+    
+    if label == 'movies':
+        add_text(X1,idx=51,text='Star Trek', ax = axes[0]) #x=0.1)
+        add_text(X1,idx=124,text='Night at the museum', ax = axes[0]) #,y=0.2)
+        
+        add_text(X2,idx=51,text='Star Trek', ax = axes[1], y=0.8)
+        add_text(X2,idx=124,text='Night at the museum', ax = axes[1]) #,y=0.2)
+        
+    elif label == 'electronic devices':
+        add_text(X1, 76,text='Canon EOS', ax = axes[0])
+        add_text(X1, 267,text='Canon 40D', ax = axes[0])
+
+        add_text(X2, 76,text='Canon EOS', ax = axes[1])
+        add_text(X2, 267,text='Canon 40D', ax = axes[1])
+        
+    elif label == 'politics':
+        add_text(X1, 375,text='Obama', ax = axes[0]) 
+        add_text(X1, 86,text='North Korea', ax = axes[0])
+        add_text(X1, 157,text='China', ax = axes[0]) #,y=0.1)
+        add_text(X1, 247,text='Clinton', ax = axes[0]) #,x=0.2,y=-0.2)
+        add_text(X1, 484,text='Iran', ax = axes[0]) #,x=-0.7)
+        
+        add_text(X2, 375,text='Obama', ax = axes[1]) 
+        add_text(X2, 86,text='North Korea', ax = axes[1])
+        add_text(X2, 157,text='China', ax = axes[1],y=-0.5)
+        add_text(X2, 247,text='Clinton', ax = axes[1]) #,x=0.2,y=-0.2)
+        add_text(X2, 484,text='Iran', ax = axes[1]) #,x=-0.7)
+        
+    elif label == 'Nike':
+        add_text(X1, 73,text='Nike', ax = axes[0])
+        add_text(X2, 73,text='Nike', ax = axes[1])
+        
+    elif label == 'mobile devices':
+        add_text(X1, 227,text='iPhone', ax = axes[0])
+        add_text(X1, 23,text='iPhone app', ax = axes[0]) 
+        
+        add_text(X2, 227,text='iPhone', ax = axes[1])
+        add_text(X2, 23,text='iPhone app', ax = axes[1]) 
+        
+    elif label == 'Twitter':
+        add_text(X1, 464,text='tweet', ax = axes[0])
+        add_text(X1, 8,text='Twitter', ax = axes[0])
+        add_text(X1, 60,text='Twitter API', ax = axes[0])
+
+        add_text(X2, 464,text='tweet', ax = axes[1])
+        add_text(X2, 8,text='Twitter', ax = axes[1])
+        add_text(X2, 60,text='Twitter API', ax = axes[1])
+        
+    elif label == 'sports':
+        add_text(X1, 19,text='Lebron', ax = axes[0])
+        add_text(X1, 119,text='Lakers', ax = axes[0])
+        add_text(X1, 171,text='NCAA', ax = axes[0])
+        add_text(X1, 207,text='All-Star basket', ax = axes[0])
+        add_text(X1, 404,text='NY Yankees', ax = axes[0])
+        
+        add_text(X2, 19,text='Lebron', ax = axes[1])
+        add_text(X2, 119,text='Lakers', ax = axes[1])
+        add_text(X2, 171,text='NCAA', ax = axes[1])
+        add_text(X2, 207,text='All-Star basket', ax = axes[1], y = -1.4)
+        add_text(X2, 404,text='NY Yankees', ax = axes[1])
+        
+    elif label == 'IT': 
+        add_text(X1, 7,text='Jquery', ax = axes[0])
+        add_text(X1, 480,text='LaTeX', ax = axes[0])
+        add_text(X1, 319,text='λ-calculus', ax = axes[0])
+        
+        add_text(X2, 7,text='Jquery', ax = axes[1])
+        add_text(X2, 480,text='LaTeX', ax = axes[1])
+        add_text(X2, 319,text='λ-calculus', ax = axes[1])
+        
+    elif label == 'books':
+        add_text(X1, 1,text='kindle2', ax = axes[0])
+        add_text(X1, 0,text='kindle2', ax = axes[0])
+        add_text(X1, 57,text='malcolm gladwell book', ax = axes[0])
+        add_text(X1, 106,text='jQuery book', ax = axes[0])      
+        
+        add_text(X2, 1,text='kindle2', ax = axes[1])
+        add_text(X2, 0,text='kindle2', ax = axes[1], y=-1.)
+        add_text(X2, 57,text='malcolm gladwell book', ax = axes[1])
+        add_text(X2, 106,text='jQuery book', ax = axes[1])
+
+
+    plt.legend()
+    plt.tight_layout();
+    
+    
+##########
+def add_text(embedding,idx,text,ax,x=0.0,y=0.0):
+##################
+    ax.annotate(text,(embedding[idx,0]+x,embedding[idx,1]+y),fontsize=12)
+    
